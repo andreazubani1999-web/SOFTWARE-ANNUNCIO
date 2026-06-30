@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>AZ Annunci Analyzer v0.1</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+--bg:#0e1120;--panel:#181d33;--panel2:#222846;--line:#30385f;--text:#f5f7ff;--muted:#aeb7dc;
+--cyan:#16c7ff;--green:#28d17c;--red:#ff5d5d;--yellow:#f7c948;--blue:#6d4cff;
+}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:radial-gradient(circle at top left,#222852 0,#0e1120 38%,#090b15 100%);color:var(--text)}
+.app{min-height:100vh;display:grid;grid-template-columns:1fr}
+.header{background:#15182b;border-bottom:1px solid #2b3150;padding:16px;position:sticky;top:0;z-index:10}
+.logo{font-size:21px;font-weight:900}.logo span{color:var(--yellow)}
+.version{font-size:12px;color:var(--muted);margin-top:4px}
+.main{padding:16px}
+.panel{background:rgba(24,29,51,.96);border:1px solid #2f3658;border-radius:22px;padding:18px;margin-bottom:18px}
+h1,h2,h3{margin-top:0}.small{font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+label{display:block;margin-bottom:7px;font-size:14px;color:#b9c0df}
+input,select,textarea{width:100%;padding:14px;border-radius:14px;border:1px solid #394166;background:#0f1428;color:#fff;font-size:16px;outline:none}
+textarea{min-height:90px}
+.btn{border:0;border-radius:14px;padding:14px 16px;background:var(--cyan);color:#001018;font-weight:900;cursor:pointer;font-size:15px;min-height:50px}
+.btn.gray{background:#303650;color:#fff}.btn.green{background:var(--green)}.btn.red{background:var(--red);color:#fff}.btn.yellow{background:var(--yellow);color:#111}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.kpiGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:#1c223b;border-radius:16px;padding:15px;border:1px solid rgba(255,255,255,.06)}
+.kpi span{display:block;color:#aeb6d6;font-size:12px}.kpi strong{font-size:22px}
+.resultBox{border-radius:18px;padding:18px;margin-top:12px;border-left:5px solid var(--yellow);background:#222846}
+.good{border-left-color:var(--green);background:rgba(40,209,124,.12)}
+.warn{border-left-color:var(--yellow);background:rgba(247,201,72,.12)}
+.bad{border-left-color:var(--red);background:rgba(255,93,93,.12)}
+.summaryLine{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(255,255,255,.08);padding:9px 0}
+.badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#2e3558;font-size:12px;margin:4px 4px 0 0}
+.score{font-size:42px;font-weight:900}
+.report{background:#fff;color:#111;padding:28px;border-radius:14px}
+.report h1,.report h2,.report h3{color:#111}
+.report table{width:100%;border-collapse:collapse;margin:14px 0}
+.report th,.report td{border:1px solid #ddd;padding:8px;text-align:left}
+.report th{background:#f1f1f1}
+.modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:999;padding:14px}
+.modal{width:min(920px,96vw);max-height:90vh;overflow:auto;background:#181d33;border:1px solid #394166;border-radius:24px;padding:20px}
+@media(max-width:760px){
+.grid,.kpiGrid{grid-template-columns:1fr}
+.header{position:relative}
+}
+@media(min-width:1100px){
+.app{grid-template-columns:1fr 360px}
+.header{grid-column:1/3}
+.main{padding:24px}
+.side{padding:24px 18px 24px 0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="header">
+<div class="logo"><span>AZ</span> Annunci Analyzer</div>
+<div class="version">v0.1 · valutazione manuale annuncio immobiliare</div>
+</header>
+
+<main class="main">
+<section class="panel">
+<h1>Dati annuncio</h1>
+<div class="grid">
+<div><label>Nome immobile</label><input id="title" placeholder="Es. Trilocale Via Milano"></div>
+<div><label>Link annuncio</label><input id="link" placeholder="https://..."></div>
+<div><label>Città / zona</label><input id="zone" placeholder="Es. Brescia - Fiumicello"></div>
+<div><label>Indirizzo / via</label><input id="address" placeholder="Es. Via ..."></div>
+<div><label>Prezzo richiesto (€)</label><input id="asking" inputmode="decimal"></div>
+<div><label>Metri quadri</label><input id="mq" inputmode="decimal"></div>
+<div><label>Locali</label><input id="rooms" inputmode="numeric"></div>
+<div><label>Piano</label><input id="floor" placeholder="Es. 2° con ascensore"></div>
+<div><label>Stato immobile</label><select id="condition"><option value="da_ristrutturare">Da ristrutturare</option><option value="abitabile">Abitabile</option><option value="buono">Buono</option><option value="ristrutturato">Ristrutturato</option></select></div>
+<div><label>Ascensore</label><select id="lift"><option value="si">Sì</option><option value="no">No</option><option value="na">Non rilevante</option></select></div>
+<div><label>Box / posto auto</label><select id="parking"><option value="no">No</option><option value="posto">Posto auto</option><option value="box">Box</option></select></div>
+<div><label>Balcone / terrazzo</label><select id="outdoor"><option value="no">No</option><option value="balcone">Balcone</option><option value="terrazzo">Terrazzo</option><option value="giardino">Giardino</option></select></div>
+</div>
+</section>
+
+<section class="panel">
+<h1>Ipotesi investimento</h1>
+<div class="grid">
+<div><label>Valore rivendita stimato / ARV (€)</label><input id="arv" inputmode="decimal"></div>
+<div><label>Stima lavori €/mq</label><input id="worksPerMq" inputmode="decimal" value="1000"></div>
+<div><label>Imprevisti (%)</label><input id="contingency" inputmode="decimal" value="10"></div>
+<div><label>Spese accessorie (€)</label><input id="accessory" inputmode="decimal" value="12000"></div>
+<div><label>Margine minimo desiderato (€)</label><input id="targetMargin" inputmode="decimal" value="25000"></div>
+<div><label>ROI minimo desiderato (%)</label><input id="targetRoi" inputmode="decimal" value="15"></div>
+</div>
+<div class="actions">
+<button class="btn green" onclick="calculate()">Analizza annuncio</button>
+<button class="btn yellow" onclick="loadDemo()">Esempio</button>
+<button class="btn gray" onclick="saveLocal()">Salva</button>
+<button class="btn gray" onclick="loadLocal()">Carica</button>
+<button class="btn" onclick="openReport()">Report</button>
+<button class="btn red" onclick="clearAll()">Reset</button>
+</div>
+</section>
+
+<section class="panel">
+<h1>Valutazione</h1>
+<div id="result"></div>
+</section>
+
+<section class="panel">
+<h1>Note qualitative</h1>
+<div class="grid">
+<div>
+<label>Punti forti</label>
+<textarea id="strengths" placeholder="Es. zona servita, taglio richiesto, piano buono, balcone..."></textarea>
+</div>
+<div>
+<label>Punti deboli / rischi</label>
+<textarea id="risks" placeholder="Es. piano terra, zona debole, condominio brutto, lavori pesanti..."></textarea>
+</div>
+</div>
+<label>Note finali</label>
+<textarea id="notes" placeholder="Considerazioni personali sull'annuncio"></textarea>
+</section>
+</main>
+
+<aside class="side">
+<section class="panel">
+<h2>Riepilogo rapido</h2>
+<div class="kpi"><span>Prezzo richiesto</span><strong id="sideAsking">€0</strong></div>
+<div class="kpi"><span>€/mq richiesto</span><strong id="sidePsm">€0</strong></div>
+<div class="kpi"><span>MAO</span><strong id="sideMao">€0</strong></div>
+<div class="kpi"><span>Decisione</span><strong id="sideDecision">-</strong></div>
+</section>
+</aside>
+</div>
+
+<div class="modalOverlay" id="reportModal">
+<div class="modal">
+<div class="actions"><button class="btn gray" onclick="closeReport()">Chiudi</button><button class="btn yellow" onclick="printReport()">Stampa / PDF</button></div>
+<br>
+<div id="reportContent" class="report"></div>
+</div>
+</div>
+
+<script>
+const fields=["title","link","zone","address","asking","mq","rooms","floor","condition","lift","parking","outdoor","arv","worksPerMq","contingency","accessory","targetMargin","targetRoi","strengths","risks","notes"];
+
+function val(id){return document.getElementById(id).value}
+function setVal(id,v){document.getElementById(id).value=v??""}
+function num(id){return parseIt(val(id))}
+function parseIt(v){return +String(v||"").replace(/[€\s]/g,"").replace(/\./g,"").replace(",",".")||0}
+function euro(n){return new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(+n||0)}
+function fmt(n){return new Intl.NumberFormat("it-IT",{maximumFractionDigits:1}).format(+n||0)}
+
+function collect(){
+const data={};
+fields.forEach(id=>data[id]=val(id));
+return data;
+}
+
+function calculate(){
+const asking=num("asking");
+const mq=num("mq");
+const arv=num("arv");
+const worksPerMq=num("worksPerMq");
+const contingencyPerc=num("contingency");
+const accessory=num("accessory");
+const targetMargin=num("targetMargin");
+const targetRoi=num("targetRoi");
+
+const psm=mq>0?asking/mq:0;
+const arvPsm=mq>0?arv/mq:0;
+const works=mq*worksPerMq;
+const contingency=works*(contingencyPerc/100);
+const totalCostsNoPurchase=works+contingency+accessory;
+const mao=arv-totalCostsNoPurchase-targetMargin;
+const diff=asking-mao;
+const investmentAtAsk=asking+totalCostsNoPurchase;
+const marginAtAsk=arv-investmentAtAsk;
+const roiAtAsk=investmentAtAsk>0?marginAtAsk/investmentAtAsk*100:0;
+
+let score=0;
+if(mq>0)score+=10;
+if(arv>asking)score+=15;
+if(diff<=0)score+=25;
+if(roiAtAsk>=targetRoi)score+=20;
+if(marginAtAsk>=targetMargin)score+=20;
+if(val("condition")==="da_ristrutturare")score+=5;
+if(val("lift")==="si")score+=3;
+if(val("outdoor")!=="no")score+=2;
+score=Math.max(0,Math.min(100,score));
+
+let decision="Da approfondire",cls="warn";
+if(score>=75){decision="Da visitare";cls="good"}
+else if(score<45){decision="Da scartare";cls="bad"}
+
+const status=diff>0
+? `<div class="resultBox bad"><strong>Prezzo richiesto troppo alto di ${euro(diff)}</strong><br><span class="small">Per rispettare il margine minimo, dovresti offrire al massimo ${euro(mao)}.</span></div>`
+: `<div class="resultBox good"><strong>Prezzo compatibile con il MAO</strong><br><span class="small">Il prezzo richiesto è pari o inferiore al prezzo massimo sostenibile.</span></div>`;
+
+document.getElementById("result").innerHTML=`
+<div class="kpiGrid">
+<div class="kpi"><span>Score annuncio</span><strong class="score">${score}</strong></div>
+<div class="kpi"><span>Decisione</span><strong>${decision}</strong></div>
+<div class="kpi"><span>Prezzo €/mq</span><strong>${euro(psm)}</strong></div>
+<div class="kpi"><span>ARV €/mq</span><strong>${euro(arvPsm)}</strong></div>
+</div>
+${status}
+<div class="panel" style="margin-top:14px">
+<h3>Numeri principali</h3>
+<div class="summaryLine"><span>Prezzo richiesto annuncio</span><strong>${euro(asking)}</strong></div>
+<div class="summaryLine"><span>Metri quadri</span><strong>${fmt(mq)} mq</strong></div>
+<div class="summaryLine"><span>ARV / rivendita stimata</span><strong>${euro(arv)}</strong></div>
+<div class="summaryLine"><span>Stima lavori</span><strong>${euro(works)}</strong></div>
+<div class="summaryLine"><span>Imprevisti</span><strong>${euro(contingency)}</strong></div>
+<div class="summaryLine"><span>Spese accessorie</span><strong>${euro(accessory)}</strong></div>
+<div class="summaryLine"><span>Margine minimo desiderato</span><strong>${euro(targetMargin)}</strong></div>
+<div class="summaryLine"><span><strong>MAO / prezzo massimo offerta</strong></span><strong>${euro(mao)}</strong></div>
+<div class="summaryLine"><span>Differenza richiesta vs MAO</span><strong>${euro(diff)}</strong></div>
+<div class="summaryLine"><span>Margine comprando al prezzo richiesto</span><strong>${euro(marginAtAsk)}</strong></div>
+<div class="summaryLine"><span>ROI comprando al prezzo richiesto</span><strong>${fmt(roiAtAsk)}%</strong></div>
+</div>
+<div class="panel">
+<h3>Lettura veloce</h3>
+${badges(decision,score,diff,roiAtAsk,marginAtAsk)}
+</div>
+`;
+
+document.getElementById("sideAsking").textContent=euro(asking);
+document.getElementById("sidePsm").textContent=euro(psm);
+document.getElementById("sideMao").textContent=euro(mao);
+document.getElementById("sideDecision").textContent=decision;
+
+return {asking,mq,arv,psm,arvPsm,works,contingency,accessory,targetMargin,targetRoi,mao,diff,investmentAtAsk,marginAtAsk,roiAtAsk,score,decision};
+}
+
+function badges(decision,score,diff,roi,margin){
+let arr=[];
+arr.push(`<span class="badge">Decisione: ${decision}</span>`);
+arr.push(`<span class="badge">Score: ${score}/100</span>`);
+arr.push(diff>0?`<span class="badge">Richiesta sopra MAO</span>`:`<span class="badge">Richiesta compatibile</span>`);
+arr.push(`<span class="badge">ROI al prezzo richiesto: ${fmt(roi)}%</span>`);
+arr.push(`<span class="badge">Margine al prezzo richiesto: ${euro(margin)}</span>`);
+return arr.join("");
+}
+
+function saveLocal(){
+localStorage.setItem("az_annunci_analyzer_v01",JSON.stringify(collect()));
+alert("Salvato.");
+}
+
+function loadLocal(){
+const raw=localStorage.getItem("az_annunci_analyzer_v01");
+if(!raw)return alert("Nessun salvataggio trovato.");
+const data=JSON.parse(raw);
+fields.forEach(id=>setVal(id,data[id]));
+calculate();
+}
+
+function clearAll(){
+if(!confirm("Cancellare tutti i dati?"))return;
+fields.forEach(id=>setVal(id,""));
+setVal("worksPerMq","1000");
+setVal("contingency","10");
+setVal("accessory","12000");
+setVal("targetMargin","25000");
+setVal("targetRoi","15");
+document.getElementById("result").innerHTML="";
+calculate();
+}
+
+function loadDemo(){
+setVal("title","Trilocale da ristrutturare");
+setVal("link","https://immobiliare.it/annuncio-demo");
+setVal("zone","Brescia - Fiumicello");
+setVal("address","Via esempio");
+setVal("asking","145000");
+setVal("mq","78");
+setVal("rooms","3");
+setVal("floor","2° piano");
+setVal("condition","da_ristrutturare");
+setVal("lift","si");
+setVal("parking","no");
+setVal("outdoor","balcone");
+setVal("arv","225000");
+setVal("worksPerMq","1000");
+setVal("contingency","10");
+setVal("accessory","13000");
+setVal("targetMargin","30000");
+setVal("targetRoi","15");
+setVal("strengths","Zona servita, taglio richiesto, piano buono, presenza balcone.");
+setVal("risks","Da verificare condominio, stato impianti, spese condominiali e reale margine trattativa.");
+setVal("notes","Annuncio interessante se il venditore accetta una trattativa importante.");
+calculate();
+}
+
+function reportHTML(){
+const r=calculate();
+return `
+<h1>Analisi annuncio immobiliare</h1>
+<p><strong>Immobile:</strong> ${val("title")||"-"}</p>
+<p><strong>Zona:</strong> ${val("zone")||"-"}</p>
+<p><strong>Indirizzo:</strong> ${val("address")||"-"}</p>
+<p><strong>Link:</strong> ${val("link")||"-"}</p>
+
+<h2>Decisione sintetica</h2>
+<table>
+<tr><td>Score annuncio</td><td>${r.score}/100</td></tr>
+<tr><td>Decisione</td><td>${r.decision}</td></tr>
+<tr><td>Prezzo richiesto</td><td>${euro(r.asking)}</td></tr>
+<tr><td>MAO / prezzo massimo offerta</td><td>${euro(r.mao)}</td></tr>
+<tr><td>Differenza richiesta vs MAO</td><td>${euro(r.diff)}</td></tr>
+</table>
+
+<h2>Analisi economica</h2>
+<table>
+<tr><td>Metri quadri</td><td>${fmt(r.mq)} mq</td></tr>
+<tr><td>Prezzo richiesto €/mq</td><td>${euro(r.psm)}</td></tr>
+<tr><td>ARV / rivendita stimata</td><td>${euro(r.arv)}</td></tr>
+<tr><td>ARV €/mq</td><td>${euro(r.arvPsm)}</td></tr>
+<tr><td>Stima lavori</td><td>${euro(r.works)}</td></tr>
+<tr><td>Imprevisti</td><td>${euro(r.contingency)}</td></tr>
+<tr><td>Spese accessorie</td><td>${euro(r.accessory)}</td></tr>
+<tr><td>Margine minimo desiderato</td><td>${euro(r.targetMargin)}</td></tr>
+<tr><td>Margine comprando al prezzo richiesto</td><td>${euro(r.marginAtAsk)}</td></tr>
+<tr><td>ROI comprando al prezzo richiesto</td><td>${fmt(r.roiAtAsk)}%</td></tr>
+</table>
+
+<h2>Punti forti</h2>
+<p>${val("strengths")||"-"}</p>
+
+<h2>Rischi / punti deboli</h2>
+<p>${val("risks")||"-"}</p>
+
+<h2>Note finali</h2>
+<p>${val("notes")||"-"}</p>
+`;
+}
+
+function openReport(){
+document.getElementById("reportContent").innerHTML=reportHTML();
+document.getElementById("reportModal").style.display="flex";
+}
+
+function closeReport(){
+document.getElementById("reportModal").style.display="none";
+}
+
+function printReport(){
+window.print();
+}
+
+fields.forEach(id=>{
+const el=document.getElementById(id);
+if(el)el.addEventListener("input",()=>calculate());
+});
+
+calculate();
+</script>
+</body>
+</html>
