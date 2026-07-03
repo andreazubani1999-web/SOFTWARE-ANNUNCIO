@@ -1,0 +1,11 @@
+{
+  "name": "AZ Analyzer V0.2",
+  "short_name": "AZ Analyzer",
+  "description": "Software di analisi annunci immobiliari per flipping.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#071827",
+  "theme_color": "#071827"
+}
